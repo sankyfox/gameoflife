@@ -4,7 +4,9 @@
 #include <string.h>
 #include "mpi.h"
 
+// Default values
 #define DEFAULT_ITERATIONS 64
+#define DEFAULT_DIM 16
 #define GRID_WIDTH 256
 #define DIM 16 // assume a square grid
 
@@ -40,19 +42,27 @@ int main(int argc, char **argv)
     int ID, j;
     int iters = 0;
     int num_iterations;
+    int dimensions;
 
     // Setup number of iterations
     if (argc == 1)
     {
+        dimensions = DEFAULT_DIM;
         num_iterations = DEFAULT_ITERATIONS;
     }
     else if (argc == 2)
     {
-        num_iterations = atoi(argv[1]);
+        dimensions = atoi(argv[1]);
+        num_iterations = DEFAULT_ITERATIONS;
+    }
+    else if (argc == 3)
+    {
+        dimensions = atoi(argv[1]);
+        num_iterations = atoi(argv[2]);
     }
     else
     {
-        printf("Usage: ./gameoflife <num_iterations>\n");
+        printf("Usage: ./gameoflife <dimensions> <num_iterations>\n");
         exit(1);
     }
 
@@ -74,7 +84,7 @@ int main(int argc, char **argv)
     int *arr = (int *)malloc(DIM * ((DIM / num_procs) + 2) * sizeof(int));
     for (iters = 0; iters < num_iterations; iters++)
     {
-        //printf("%d %d\n",ID, DIM * ((DIM / num_procs) + 2));
+        // printf("%d %d\n",ID, DIM * ((DIM / num_procs) + 2));
         j = DIM;
         for (int i = ID * (GRID_WIDTH / num_procs); i < (ID + 1) * (GRID_WIDTH / num_procs); i++)
         {
@@ -86,7 +96,7 @@ int main(int argc, char **argv)
 
         if (num_procs != 1)
         {
-            //odd-even send_recv
+            // odd-even send_recv
             int incoming_1[DIM];
             int incoming_2[DIM];
             int send_1[DIM];
@@ -94,23 +104,23 @@ int main(int argc, char **argv)
             if (ID % 2 == 0)
             {
 
-                //first16
+                // first16
                 for (int i = 0; i < DIM; i++)
                 {
                     send_1[i] = arr[i + DIM];
                     // printf(" - %d - ",send_1[i]);
-                    //printf(" %d %d\n ",i,i+DIM);
+                    // printf(" %d %d\n ",i,i+DIM);
                 }
-                //first row to ID-1
+                // first row to ID-1
                 MPI_Ssend(&send_1, DIM, MPI_INT, mod(ID - 1, num_procs), 1, MPI_COMM_WORLD);
 
-                //last16
+                // last16
                 for (int i = 0; i < DIM; i++)
                 {
                     send_2[i] = arr[(DIM * (DIM / num_procs)) + i];
                     // printf(" %d %d\n ",i,(DIM * (DIM / num_procs)) + i);
                 }
-                //last row to ID+1
+                // last row to ID+1
                 MPI_Ssend(&send_2, DIM, MPI_INT, mod(ID + 1, num_procs), 1, MPI_COMM_WORLD);
             }
             else
@@ -125,14 +135,14 @@ int main(int argc, char **argv)
             }
             else
             {
-                //first16
+                // first16
                 for (int i = 0; i < DIM; i++)
                 {
                     send_1[i] = arr[i + DIM];
                 }
                 MPI_Ssend(&send_1, DIM, MPI_INT, mod(ID - 1, num_procs), 1, MPI_COMM_WORLD);
 
-                //last16
+                // last16
                 for (int i = 0; i < DIM; i++)
                 {
                     send_2[i] = arr[(DIM * (DIM / num_procs)) + i];
@@ -150,16 +160,16 @@ int main(int argc, char **argv)
             for (int i = 0; i < DIM; i++)
             {
                 arr[i + GRID_WIDTH + DIM] = global_grid[i];
-                //printf(" %d %d \n",i + GRID_WIDTH+DIM,i);
+                // printf(" %d %d \n",i + GRID_WIDTH+DIM,i);
             }
             for (int i = GRID_WIDTH; i < GRID_WIDTH + DIM; i++)
             {
                 arr[i - GRID_WIDTH] = global_grid[i - DIM];
-                //printf(" %d %d \n",i - GRID_WIDTH,i-DIM);
+                // printf(" %d %d \n",i - GRID_WIDTH,i-DIM);
             }
         }
-        //game logic neighbours
-        int * final = (int *)malloc(DIM * ((DIM / num_procs)) * sizeof(int));
+        // game logic neighbours
+        int *final = (int *)malloc(DIM * ((DIM / num_procs)) * sizeof(int));
 
         for (int k = DIM; k < DIM * ((DIM / num_procs) + 1); k++)
         {
